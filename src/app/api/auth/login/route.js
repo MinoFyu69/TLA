@@ -1,8 +1,6 @@
-// D:\Projek Coding\APA\src\app\api\auth\login\route.js
-
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { createToken } from '@/lib/auth';
+import pool from '@/lib/db.js';
+import { createToken } from '@/lib/auth.js';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req) {

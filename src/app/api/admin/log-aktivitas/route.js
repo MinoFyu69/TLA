@@ -1,8 +1,8 @@
 // D:\Projek Coding\APA\src\app\api\admin\log-aktivitas\route.js
 
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import pool from '@/lib/db.js';
+import { verifyToken } from '@/lib/auth.js';
 
 // GET - Read all log aktivitas
 export async function GET(req) {

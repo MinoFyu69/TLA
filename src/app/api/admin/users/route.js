@@ -1,8 +1,8 @@
 // D:\Projek Coding\APA\src\app\api\admin\users\route.js
 
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import pool from '@/lib/db.js';
+import { verifyToken } from '@/lib/auth.js';
 import bcrypt from 'bcryptjs';
 
 // GET - Read all users

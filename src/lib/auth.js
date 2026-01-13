@@ -1,5 +1,3 @@
-// D:\Projek Coding\APA\src\middleware.js
-
 import * as jose from 'jose';
 
 export async function verifyToken(req) {

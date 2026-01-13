@@ -1,8 +1,8 @@
 // D:\Projek Coding\APA\src\app\api\admin\pengembalian\route.js
 
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { verifyToken } from '@/lib/auth';
+import pool from '@/lib/db.js';
+import { verifyToken } from '@/lib/auth.js';
 
 // GET - Read all pengembalian
 export async function GET(req) {
