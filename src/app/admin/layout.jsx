@@ -5,11 +5,19 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+
+// Import navigation components
+// import NavigationSidebar from '@/components/NavigationSidebar';
 import TopNavigation from '@/components/NavbarAdmin';
+// import FloatingMidBar from '@/components/FloatingMidBar';
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
+  
+  // Hook untuk auto-check dan refresh token
+  useAuth();
 
   useEffect(() => {
     setIsClient(true);
@@ -31,28 +39,21 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
-      {/* 
-        PILIH SALAH SATU NAVIGATION STYLE:
-        
-        1. Sidebar (Classic) - Uncomment NavigationSidebar
-        2. Top Bar (Modern) - Uncomment TopNavigation  ✅ AKTIF
-        3. Floating Mid Bar (Unique) - Uncomment FloatingMidBar
-      */}
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 pt-4">
       
       {/* <NavigationSidebar /> */}
       <TopNavigation />
       {/* <FloatingMidBar /> */}
 
       {/* Main Content */}
-      <main className="w-full">
+      <main className="w-full pt-4">
         {/* 
           Padding adjustment based on navigation style:
           - Sidebar: use 'lg:ml-64' class
           - Top Bar: use 'pt-4' class  
           - Floating Mid Bar: no padding needed
         */}
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-4 py-6 pt-4">
           {children}
         </div>
       </main>

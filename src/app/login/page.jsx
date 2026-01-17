@@ -15,13 +15,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   // Cek apakah sudah login
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      router.push('/admin/dashboard');
-    }
-  }, [router]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -49,8 +42,17 @@ export default function LoginPage() {
       console.log('Token saved:', data.token); // Debug
       console.log('User saved:', data.user); // Debug
 
-      // Redirect ke dashboard admin
-      router.push('/admin/dashboard');
+      // Redirect berdasarkan role
+      const { role } = data.user;
+      if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else if (role === 'petugas') {
+        router.push('/petugas/dashboard');
+      } else if (role === 'peminjam') {
+        router.push('/peminjam');
+      } else {
+        router.push('/login');
+      }
       
     } catch (err) {
       console.error('Login error:', err);
