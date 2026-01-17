@@ -18,9 +18,19 @@ export async function POST(req) {
     // Di sini kamu bisa tambahkan logging aktivitas logout jika perlu
     // await pool.query('INSERT INTO log_aktivitas ...');
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       message: 'Logout berhasil'
     });
+
+    // Hapus cookie token
+    response.cookies.set('token', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0 // Hapus cookie
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Logout error:', error);

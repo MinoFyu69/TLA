@@ -7,36 +7,71 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // Cek apakah route memerlukan autentikasi
-  const isProtectedRoute = pathname.startsWith('/admin');
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isPetugasRoute = pathname.startsWith('/petugas');
+  const isPeminjamRoute = pathname.startsWith('/peminjam');
   const isAuthRoute = pathname.startsWith('/login');
 
+  const isProtectedRoute = isAdminRoute || isPetugasRoute || isPeminjamRoute;
+
   if (isProtectedRoute) {
+    // Cek token dari cookie atau header
     const token = request.cookies.get('token')?.value || 
                   request.headers.get('authorization')?.split(' ')[1];
 
     if (!token) {
+      console.log('No token found, redirecting to login');
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
     try {
       const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-      await jose.jwtVerify(token, secret);
+      const { payload } = await jose.jwtVerify(token, secret);
+      
+      console.log('Token valid for user:', payload.username, 'Role:', payload.role);
+      
+      // Check role-based access
+      if (isAdminRoute && payload.role !== 'admin') {
+        console.log('Non-admin trying to access admin route');
+        return NextResponse.redirect(new URL(`/${payload.role}/dashboard`, request.url));
+      }
+      
+      if (isPetugasRoute && payload.role !== 'petugas') {
+        console.log('Non-petugas trying to access petugas route');
+        return NextResponse.redirect(new URL(`/${payload.role}/dashboard`, request.url));
+      }
+      
+      if (isPeminjamRoute && payload.role !== 'peminjam') {
+        console.log('Non-peminjam trying to access peminjam route');
+        return NextResponse.redirect(new URL(`/${payload.role}/dashboard`, request.url));
+      }
+      
+      // Token valid dan role sesuai, lanjutkan
       return NextResponse.next();
     } catch (error) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      console.error('Token invalid:', error.message);
+      
+      // Hapus cookie yang invalid
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      response.cookies.set('token', '', { maxAge: 0 });
+      
+      return response;
     }
   }
 
-  // Redirect ke dashboard jika sudah login dan akses /login
+  // Redirect ke dashboard sesuai role jika sudah login dan akses /login
   if (isAuthRoute) {
     const token = request.cookies.get('token')?.value;
     if (token) {
       try {
         const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-        await jose.jwtVerify(token, secret);
-        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        const { payload } = await jose.jwtVerify(token, secret);
+        
+        // Redirect ke dashboard sesuai role
+        const dashboardRoute = `/${payload.role}/dashboard`;
+        return NextResponse.redirect(new URL(dashboardRoute, request.url));
       } catch (error) {
-        // Token invalid, lanjut ke login
+        console.log('Token invalid on login page, clearing cookie');
       }
     }
   }
@@ -47,6 +82,8 @@ export async function middleware(request) {
 export const config = {
   matcher: [
     '/admin/:path*',
+    '/petugas/:path*',
+    '/peminjam/:path*',
     '/login'
   ],
 };
