@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import RoleProtection from '@/components/RoleProtection';
 import Link from 'next/link';
 
 export default function PetugasDashboard() {
@@ -39,19 +40,22 @@ export default function PetugasDashboard() {
 
   if (!user) {
     return (
+      <RoleProtection allowedRoles={['petugas']}>
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-gray-600">Loading...</div>
       </div>
+      </RoleProtection>
     );
   }
 
   const menus = [
     { name: 'Peminjaman', path: '/petugas/peminjaman', icon: '📋', desc: 'Kelola peminjaman alat' },
     { name: 'Pengembalian', path: '/petugas/pengembalian', icon: '✅', desc: 'Proses pengembalian alat' },
-    { name: 'Alat', path: '/petugas/alat', icon: '🔧', desc: 'Lihat daftar alat' },
+    { name: 'Laporan', path: '/petugas/laporan', icon: '�', desc: 'Lihat laporan peminjaman' },
   ];
 
   return (
+    <RoleProtection allowedRoles={['petugas']}>
     <div className="min-h-screen bg-linear-to-br from-green-50 to-blue-50">
       {/* Header */}
       <nav className="bg-white shadow-md">
@@ -126,5 +130,6 @@ export default function PetugasDashboard() {
         </div>
       </div>
     </div>
+    </RoleProtection>
   );
 }

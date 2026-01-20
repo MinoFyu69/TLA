@@ -1,4 +1,4 @@
-// D:\Projek Coding\APA\src\app\api\admin\peminjaman\route.js
+// src/app/api/admin/peminjaman/route.js
 
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db.js';
@@ -13,11 +13,14 @@ export async function GET(req) {
     }
 
     const result = await pool.query(
-      `SELECT p.*, u.nama as nama_peminjam, u.username, a.nama_alat, k.nama_kategori
+      `SELECT p.*, 
+              u.nama as nama_peminjam, 
+              u.username,
+              a.nama_alat,
+              a.harga_sewa
        FROM peminjaman p
        JOIN users u ON p.id_user = u.id_user
        JOIN alat a ON p.id_alat = a.id_alat
-       LEFT JOIN kategori k ON a.id_kategori = k.id_kategori
        ORDER BY p.id_peminjaman DESC`
     );
 
@@ -32,13 +35,13 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const user = await verifyToken(req);
-    if (!user || user.role !== 'admin') {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana } = await req.json();
+    const { id_alat, tanggal_pinjam, tanggal_kembali_rencana } = await req.json();
 
-    if (!id_user || !id_alat || !tanggal_pinjam || !tanggal_kembali_rencana) {
+    if (!id_alat || !tanggal_pinjam || !tanggal_kembali_rencana) {
       return NextResponse.json(
         { error: 'Semua field harus diisi' },
         { status: 400 }
@@ -57,20 +60,20 @@ export async function POST(req) {
 
     if (alatCheck.rows[0].status !== 'tersedia') {
       return NextResponse.json(
-        { error: 'Alat sedang tidak tersedia' },
+        { error: 'Alat tidak tersedia' },
         { status: 400 }
       );
     }
 
     const result = await pool.query(
       `INSERT INTO peminjaman (id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana, status) 
-       VALUES ($1, $2, $3, $4, 'menunggu') 
+       VALUES ($1, $2, $3, $4, $5) 
        RETURNING *`,
-      [id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana]
+      [user.id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana, 'menunggu']
     );
 
     return NextResponse.json({
-      message: 'Peminjaman berhasil ditambahkan',
+      message: 'Peminjaman berhasil diajukan',
       data: result.rows[0]
     }, { status: 201 });
 
@@ -88,9 +91,9 @@ export async function PUT(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id_peminjaman, id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana, status } = await req.json();
+    const { id_peminjaman, tanggal_pinjam, tanggal_kembali_rencana } = await req.json();
 
-    if (!id_peminjaman || !id_user || !id_alat || !tanggal_pinjam || !tanggal_kembali_rencana) {
+    if (!id_peminjaman || !tanggal_pinjam || !tanggal_kembali_rencana) {
       return NextResponse.json(
         { error: 'Semua field harus diisi' },
         { status: 400 }
@@ -99,10 +102,10 @@ export async function PUT(req) {
 
     const result = await pool.query(
       `UPDATE peminjaman 
-       SET id_user = $1, id_alat = $2, tanggal_pinjam = $3, tanggal_kembali_rencana = $4, status = $5
-       WHERE id_peminjaman = $6 
+       SET tanggal_pinjam = $1, tanggal_kembali_rencana = $2
+       WHERE id_peminjaman = $3 
        RETURNING *`,
-      [id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana, status || 'menunggu', id_peminjaman]
+      [tanggal_pinjam, tanggal_kembali_rencana, id_peminjaman]
     );
 
     if (result.rows.length === 0) {
@@ -135,14 +138,7 @@ export async function DELETE(req) {
       return NextResponse.json({ error: 'ID peminjaman harus diisi' }, { status: 400 });
     }
 
-    const result = await pool.query(
-      'DELETE FROM peminjaman WHERE id_peminjaman = $1 RETURNING id_peminjaman',
-      [id_peminjaman]
-    );
-
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: 'Peminjaman tidak ditemukan' }, { status: 404 });
-    }
+    await pool.query('DELETE FROM peminjaman WHERE id_peminjaman = $1', [id_peminjaman]);
 
     return NextResponse.json({ message: 'Peminjaman berhasil dihapus' });
 

@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import RoleProtection from '@/components/RoleProtection';
 
 export default function KategoriPage() {
   const router = useRouter();
@@ -103,6 +104,7 @@ export default function KategoriPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
+    <RoleProtection allowedRoles={['admin']}>
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="container mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -206,5 +208,6 @@ export default function KategoriPage() {
         )}
       </div>
     </div>
+    </RoleProtection>
   );
 }

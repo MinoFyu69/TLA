@@ -1,3 +1,5 @@
+// src/app/api/auth/login/route.js
+
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db.js';
 import { createToken } from '@/lib/auth.js';
@@ -35,6 +37,12 @@ export async function POST(req) {
         { status: 401 }
       );
     }
+
+    // Log aktivitas login
+    await pool.query(
+      'INSERT INTO log_aktivitas (id_user, aktivitas) VALUES ($1, $2)',
+      [user.id_user, `Login ke sistem sebagai ${user.role}`]
+    );
 
     const token = await createToken({
       id_user: user.id_user,

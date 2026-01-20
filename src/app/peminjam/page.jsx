@@ -3,6 +3,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Search, LogOut, AlertCircle, Filter, X, Package, History, Wrench } from "lucide-react";
+import Image from "next/image";
+
 
 export default function PeminjamPage() {
   const [alat, setAlat] = useState([]);
@@ -308,22 +310,32 @@ export default function PeminjamPage() {
                       className="group relative bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300 hover:-translate-y-1 animate-fadeInUp"
                       style={{ animationDelay: `${index * 0.05}s` }}
                     >
-                      <div className="absolute top-3 right-3 z-10">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          available 
-                            ? 'bg-emerald-100 text-emerald-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${available ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                          {available ? 'Tersedia' : 'Dipinjam'}
-                        </span>
-                      </div>
-
                       <div className="relative w-full aspect-3/4 bg-linear-to-br from-slate-100 to-slate-200 rounded-xl mb-4 overflow-hidden group-hover:scale-105 transition-transform duration-300">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Wrench className="w-16 h-16 text-slate-300" />
-                        </div>
+                      {item.gambar ? (
+                        <Image
+                          src={item.gambar}
+                          alt={item.nama_alat}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget
+                              .parentElement
+                              .querySelector(".fallback-icon")
+                              ?.classList.remove("hidden");
+                          }}
+                        />
+                      ) : null}
+
+                      <div
+                        className={`fallback-icon absolute inset-0 flex items-center justify-center ${
+                          item.gambar ? "hidden" : ""
+                        }`}
+                      >
+                        <Wrench className="w-16 h-16 text-slate-300" />
                       </div>
+                    </div>
 
                       <div className="space-y-3">
                         <div>

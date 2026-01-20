@@ -10,6 +10,7 @@ import {
   ArrowLeft, FileText, Download, Calendar, DollarSign,
   TrendingUp, Package, Users, Wrench, Filter
 } from 'lucide-react';
+import RoleProtection from '@/components/RoleProtection';
 
 export default function PetugasLaporanPage() {
   const router = useRouter();
@@ -227,6 +228,7 @@ export default function PetugasLaporanPage() {
   if (!user) return null;
 
   return (
+    <RoleProtection allowedRoles={['petugas']}>
     <div className="min-h-screen bg-linear-to-br from-green-50 to-blue-50">
       {/* Header */}
       <nav className="bg-white shadow-md sticky top-0 z-10">
@@ -444,5 +446,6 @@ export default function PetugasLaporanPage() {
         )}
       </div>
     </div>
+    </RoleProtection>
   );
 }

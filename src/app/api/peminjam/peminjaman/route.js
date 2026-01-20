@@ -25,6 +25,7 @@ export async function GET(req) {
         p.*,
         a.nama_alat,
         a.kondisi,
+        a.harga_sewa,
         k.nama_kategori,
         u.nama as nama_peminjam,
         pen.tanggal_kembali as tanggal_kembali_aktual,
@@ -38,7 +39,15 @@ export async function GET(req) {
           WHEN p.status = 'disetujui' AND pen.tanggal_kembali IS NULL THEN 
             GREATEST(0, (CURRENT_DATE - p.tanggal_kembali_rencana) * 5000)
           ELSE COALESCE(pen.denda, 0)
-        END as total_denda
+        END as total_denda,
+        CASE
+          WHEN p.status = 'disetujui' AND pen.tanggal_kembali IS NULL THEN
+            (p.tanggal_kembali_rencana - p.tanggal_pinjam) * COALESCE(a.harga_sewa, 0) * COALESCE(p.jumlah, 1)
+          WHEN pen.tanggal_kembali IS NOT NULL THEN
+            (pen.tanggal_kembali - p.tanggal_pinjam) * COALESCE(a.harga_sewa, 0) * COALESCE(p.jumlah, 1)
+          ELSE
+            (p.tanggal_kembali_rencana - p.tanggal_pinjam) * COALESCE(a.harga_sewa, 0) * COALESCE(p.jumlah, 1)
+        END as biaya_sewa
       FROM peminjaman p
       LEFT JOIN alat a ON p.id_alat = a.id_alat
       LEFT JOIN kategori k ON a.id_kategori = k.id_kategori
@@ -63,23 +72,38 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id_alat, tanggal_pinjam, tanggal_kembali_rencana } = await req.json();
+    const { id_alat, tanggal_pinjam, tanggal_kembali_rencana, jumlah } = await req.json();
 
-    if (!id_alat || !tanggal_pinjam || !tanggal_kembali_rencana) {
+    if (!id_alat || !tanggal_pinjam || !tanggal_kembali_rencana || !jumlah) {
       return NextResponse.json({
-        error: 'id_alat, tanggal_pinjam, dan tanggal_kembali_rencana harus diisi'
+        error: 'Semua field harus diisi'
       }, { status: 400 });
     }
 
-    // Cek apakah alat tersedia
+    // Validasi jumlah
+    if (jumlah <= 0) {
+      return NextResponse.json({
+        error: 'Jumlah harus lebih dari 0'
+      }, { status: 400 });
+    }
+
+    // Cek apakah alat tersedia dan stok cukup
     const alatCheck = await pool.query(
-      'SELECT * FROM alat WHERE id_alat = $1 AND kondisi = $2 AND status = $3',
-      [id_alat, 'baik', 'tersedia']
+      'SELECT nama_alat, stok FROM alat WHERE id_alat = $1 AND kondisi = $2',
+      [id_alat, 'baik']
     );
 
     if (alatCheck.rows.length === 0) {
       return NextResponse.json({
-        error: 'Alat tidak tersedia atau sedang dipinjam'
+        error: 'Alat tidak ditemukan'
+      }, { status: 400 });
+    }
+
+    const { nama_alat, stok } = alatCheck.rows[0];
+
+    if (stok < jumlah) {
+      return NextResponse.json({
+        error: `Stok tidak mencukupi. Stok tersedia: ${stok}`
       }, { status: 400 });
     }
 
@@ -97,12 +121,18 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    // Insert peminjaman baru
+    // Insert peminjaman baru dengan jumlah
     const result = await pool.query(`
-      INSERT INTO peminjaman (id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana, status) 
-      VALUES ($1, $2, $3, $4, 'menunggu') 
+      INSERT INTO peminjaman (id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana, jumlah, status) 
+      VALUES ($1, $2, $3, $4, $5, 'menunggu') 
       RETURNING *
-    `, [user.id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana]);
+    `, [user.id_user, id_alat, tanggal_pinjam, tanggal_kembali_rencana, jumlah]);
+
+    // Log aktivitas pengajuan peminjaman
+    await pool.query(
+      'INSERT INTO log_aktivitas (id_user, aktivitas) VALUES ($1, $2)',
+      [user.id_user, `Mengajukan peminjaman ${jumlah}x ${nama_alat} (Status: Menunggu Persetujuan)`]
+    );
 
     return NextResponse.json({
       message: 'Peminjaman berhasil diajukan, menunggu persetujuan',

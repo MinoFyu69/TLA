@@ -23,29 +23,18 @@ SET row_security = off;
 CREATE FUNCTION public.approve_peminjaman(p_id_peminjaman integer, p_status character varying) RETURNS void
     LANGUAGE plpgsql
     AS $$
-DECLARE
-    v_jumlah INTEGER;
-    v_id_alat INTEGER;
 BEGIN
     IF p_status = 'disetujui' THEN
-        -- Get jumlah dan id_alat
-        SELECT jumlah, id_alat INTO v_jumlah, v_id_alat
-        FROM peminjaman
-        WHERE id_peminjaman = p_id_peminjaman;
-
-        -- Update status peminjaman
         UPDATE peminjaman
         SET status = 'disetujui'
         WHERE id_peminjaman = p_id_peminjaman;
 
-        -- Kurangi stok alat
         UPDATE alat
-        SET stok = stok - v_jumlah,
-            status = CASE 
-                WHEN (stok - v_jumlah) <= 0 THEN 'dipinjam'::character varying
-                ELSE status
-            END
-        WHERE id_alat = v_id_alat;
+        SET status = 'dipinjam'
+        WHERE id_alat = (
+            SELECT id_alat FROM peminjaman
+            WHERE id_peminjaman = p_id_peminjaman
+        );
     ELSE
         UPDATE peminjaman
         SET status = 'ditolak'
@@ -101,12 +90,9 @@ CREATE FUNCTION public.proses_pengembalian(p_id_peminjaman integer, p_tanggal_ke
 DECLARE
     selisih INT;
     total_denda INT := 0;
-    v_jumlah INTEGER;
-    v_id_alat INTEGER;
 BEGIN
-    -- Hitung denda
-    SELECT p_tanggal_kembali - tanggal_kembali_rencana, jumlah, id_alat
-    INTO selisih, v_jumlah, v_id_alat
+    SELECT p_tanggal_kembali - tanggal_kembali_rencana
+    INTO selisih
     FROM peminjaman
     WHERE id_peminjaman = p_id_peminjaman;
 
@@ -114,20 +100,19 @@ BEGIN
         total_denda := selisih * 5000;
     END IF;
 
-    -- Insert pengembalian
     INSERT INTO pengembalian (id_peminjaman, tanggal_kembali, denda)
     VALUES (p_id_peminjaman, p_tanggal_kembali, total_denda);
 
-    -- Update status peminjaman
     UPDATE peminjaman
     SET status = 'dikembalikan'
     WHERE id_peminjaman = p_id_peminjaman;
 
-    -- Kembalikan stok alat
     UPDATE alat
-    SET stok = stok + v_jumlah,
-        status = 'tersedia'::character varying
-    WHERE id_alat = v_id_alat;
+    SET status = 'tersedia'
+    WHERE id_alat = (
+        SELECT id_alat FROM peminjaman
+        WHERE id_peminjaman = p_id_peminjaman
+    );
 END;
 $$;
 
@@ -278,8 +263,6 @@ CREATE TABLE public.peminjaman (
     tanggal_pinjam date NOT NULL,
     tanggal_kembali_rencana date NOT NULL,
     status character varying(20) DEFAULT 'menunggu'::character varying,
-    jumlah integer DEFAULT 1 NOT NULL,
-    CONSTRAINT peminjaman_jumlah_check CHECK ((jumlah > 0)),
     CONSTRAINT peminjaman_status_check CHECK (((status)::text = ANY ((ARRAY['menunggu'::character varying, 'disetujui'::character varying, 'ditolak'::character varying, 'dikembalikan'::character varying])::text[])))
 );
 

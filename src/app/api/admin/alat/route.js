@@ -1,4 +1,4 @@
-// D:\Projek Coding\APA\src\app\api\admin\alat\route.js
+// src/app/api/admin/alat/route.js
 
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db.js';
@@ -14,8 +14,8 @@ export async function GET(req) {
 
     const result = await pool.query(
       `SELECT a.*, k.nama_kategori 
-       FROM alat a 
-       LEFT JOIN kategori k ON a.id_kategori = k.id_kategori 
+       FROM alat a
+       LEFT JOIN kategori k ON a.id_kategori = k.id_kategori
        ORDER BY a.id_alat DESC`
     );
 
@@ -34,7 +34,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { nama_alat, id_kategori, kondisi, status } = await req.json();
+    const { nama_alat, id_kategori, kondisi, status, gambar, stok, harga_sewa, deskripsi } = await req.json();
 
     if (!nama_alat) {
       return NextResponse.json(
@@ -44,15 +44,25 @@ export async function POST(req) {
     }
 
     const result = await pool.query(
-      `INSERT INTO alat (nama_alat, id_kategori, kondisi, status) 
-       VALUES ($1, $2, $3, $4) 
+      `INSERT INTO alat (nama_alat, id_kategori, kondisi, status, gambar, stok, harga_sewa, deskripsi) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING *`,
       [
-        nama_alat, 
-        id_kategori || null, 
-        kondisi || 'baik', 
-        status || 'tersedia'
+        nama_alat,
+        id_kategori || null,
+        kondisi || 'baik',
+        status || 'tersedia',
+        gambar || null,
+        stok || 1,
+        harga_sewa || 0,
+        deskripsi || null
       ]
+    );
+
+    // Log aktivitas
+    await pool.query(
+      'INSERT INTO log_aktivitas (id_user, aktivitas) VALUES ($1, $2)',
+      [user.id_user, `Menambahkan alat baru: ${nama_alat}`]
     );
 
     return NextResponse.json({
@@ -74,7 +84,7 @@ export async function PUT(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id_alat, nama_alat, id_kategori, kondisi, status } = await req.json();
+    const { id_alat, nama_alat, id_kategori, kondisi, status, gambar, stok, harga_sewa, deskripsi } = await req.json();
 
     if (!id_alat || !nama_alat) {
       return NextResponse.json(
@@ -85,15 +95,31 @@ export async function PUT(req) {
 
     const result = await pool.query(
       `UPDATE alat 
-       SET nama_alat = $1, id_kategori = $2, kondisi = $3, status = $4 
-       WHERE id_alat = $5 
+       SET nama_alat = $1, id_kategori = $2, kondisi = $3, status = $4, gambar = $5, stok = $6, harga_sewa = $7, deskripsi = $8
+       WHERE id_alat = $9 
        RETURNING *`,
-      [nama_alat, id_kategori || null, kondisi, status, id_alat]
+      [
+        nama_alat,
+        id_kategori || null,
+        kondisi || 'baik',
+        status || 'tersedia',
+        gambar || null,
+        stok || 1,
+        harga_sewa || 0,
+        deskripsi || null,
+        id_alat
+      ]
     );
 
     if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Alat tidak ditemukan' }, { status: 404 });
     }
+
+    // Log aktivitas
+    await pool.query(
+      'INSERT INTO log_aktivitas (id_user, aktivitas) VALUES ($1, $2)',
+      [user.id_user, `Mengupdate alat: ${nama_alat}`]
+    );
 
     return NextResponse.json({
       message: 'Alat berhasil diupdate',
@@ -121,14 +147,26 @@ export async function DELETE(req) {
       return NextResponse.json({ error: 'ID alat harus diisi' }, { status: 400 });
     }
 
-    const result = await pool.query(
-      'DELETE FROM alat WHERE id_alat = $1 RETURNING id_alat',
+    // Get alat name before delete
+    const alatInfo = await pool.query(
+      'SELECT nama_alat FROM alat WHERE id_alat = $1',
       [id_alat]
     );
 
-    if (result.rows.length === 0) {
+    if (alatInfo.rows.length === 0) {
       return NextResponse.json({ error: 'Alat tidak ditemukan' }, { status: 404 });
     }
+
+    const namaAlat = alatInfo.rows[0].nama_alat;
+
+    // Delete alat
+    await pool.query('DELETE FROM alat WHERE id_alat = $1', [id_alat]);
+
+    // Log aktivitas
+    await pool.query(
+      'INSERT INTO log_aktivitas (id_user, aktivitas) VALUES ($1, $2)',
+      [user.id_user, `Menghapus alat: ${namaAlat}`]
+    );
 
     return NextResponse.json({ message: 'Alat berhasil dihapus' });
 
