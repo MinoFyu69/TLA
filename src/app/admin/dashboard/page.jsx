@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // src/app/admin/dashboard/page.jsx
 'use client';
 
@@ -138,13 +139,13 @@ export default function AdminDashboard() {
 
   return (
     <RoleProtection allowedRoles={['admin']}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
         {/* Header */}
         <nav className="bg-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
                   A
                 </div>
                 <div>
@@ -174,7 +175,7 @@ export default function AdminDashboard() {
           {/* Welcome Card */}
           <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl">
+              <div className="w-20 h-20 bg-linear-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-3xl">
                 👋
               </div>
               <div>
@@ -238,7 +239,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Info Card */}
-          <div className="mt-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-lg p-8 text-white">
+          <div className="mt-8 bg-linear-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-lg p-8 text-white">
             <h3 className="text-2xl font-bold mb-4">📢 Informasi</h3>
             <ul className="space-y-2">
               <li>✅ Anda login sebagai <strong>Admin</strong></li>

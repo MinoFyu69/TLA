@@ -61,9 +61,9 @@ const DetailModal = ({ isOpen, onClose, peminjaman }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scaleIn">
-        <div className="sticky top-0 z-10 bg-linear-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-3xl">
+        <div className="sticky top-0 z-10 bg-linear-to-br from-indigo-600 to-purple-600 text-white p-6 rounded-t-3xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">🏗️ Detail Peminjaman</h2>
+            <h2 className="text-2xl font-bold">🗒️ Detail Peminjaman</h2>
             <button 
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-full transition-colors"
@@ -82,6 +82,31 @@ const DetailModal = ({ isOpen, onClose, peminjaman }) => {
               <h3 className="font-bold text-lg text-slate-900 mb-1">{peminjaman.nama_alat}</h3>
               <p className="text-sm text-slate-600 mb-2">Kategori: {peminjaman.nama_kategori}</p>
               <StatusBadge status={peminjaman.status} />
+            </div>
+          </div>
+
+          {/* Informasi Jumlah & Biaya */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-linear-to-br from-purple-50 to-pink-50 p-5 rounded-2xl border-2 border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Package className="text-purple-600" size={20} />
+                <h3 className="font-bold text-purple-900">Jumlah Unit</h3>
+              </div>
+              <p className="text-3xl font-bold text-purple-700">{peminjaman.jumlah || 1}</p>
+              <p className="text-xs text-purple-600 mt-1">unit yang disewa</p>
+            </div>
+
+            <div className="bg-linear-to-br from-green-50 to-emerald-50 p-5 rounded-2xl border-2 border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="text-green-600" size={20} />
+                <h3 className="font-bold text-green-900">Biaya Sewa</h3>
+              </div>
+              <p className="text-2xl font-bold text-green-700">
+                Rp {(peminjaman.biaya_sewa || 0).toLocaleString('id-ID')}
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Rp {(peminjaman.harga_sewa || 0).toLocaleString('id-ID')}/hari × {peminjaman.jumlah || 1} unit
+              </p>
             </div>
           </div>
 
@@ -379,7 +404,9 @@ export default function PeminjamHistoryPage() {
                 <thead className="bg-linear-to-r from-indigo-50 to-purple-50">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Alat</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Jumlah</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Tanggal</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Biaya Sewa</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Status</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Denda</th>
                     <th className="px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase">Aksi</th>
@@ -399,6 +426,12 @@ export default function PeminjamHistoryPage() {
                           </div>
                         </div>
                       </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Package size={16} className="text-purple-500" />
+                          <span className="font-semibold text-slate-800">{p.jumlah || 1} unit</span>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-sm text-slate-600">
                         <div>
                           <p className="font-medium">
@@ -407,6 +440,16 @@ export default function PeminjamHistoryPage() {
                           <p className="text-xs text-slate-400">
                             Kembali: {new Date(p.tanggal_kembali_rencana).toLocaleDateString('id-ID')}
                           </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="font-semibold text-green-600">
+                            Rp {(p.biaya_sewa || 0).toLocaleString('id-ID')}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Rp {(p.harga_sewa || 0).toLocaleString('id-ID')}/hari
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">

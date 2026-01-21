@@ -16,7 +16,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
 
-    // Build query
+    // Build query - FIXED: Tambahkan p.jumlah dan a.harga_sewa
     let query = `
       SELECT 
         p.id_peminjaman,
@@ -25,8 +25,10 @@ export async function GET(req) {
         p.tanggal_pinjam,
         p.tanggal_kembali_rencana,
         p.status,
+        p.jumlah,
         a.nama_alat,
         a.kondisi,
+        a.harga_sewa,
         u.nama as nama_user,
         u.username
       FROM peminjaman p
