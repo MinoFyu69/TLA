@@ -84,7 +84,6 @@ const DetailModal = ({ isOpen, onClose, peminjaman }) => {
               <StatusBadge status={peminjaman.status} />
             </div>
           </div>
-
           {/* Informasi Jumlah & Biaya */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-linear-to-br from-purple-50 to-pink-50 p-5 rounded-2xl border-2 border-purple-200">
@@ -110,56 +109,6 @@ const DetailModal = ({ isOpen, onClose, peminjaman }) => {
             </div>
           </div>
 
-          <div className="bg-linear-to-br from-blue-50 to-indigo-50 p-5 rounded-2xl border-2 border-blue-100 space-y-4">
-            <h3 className="font-bold text-blue-900 flex items-center gap-2">
-              <Calendar size={20} />
-              Timeline Peminjaman
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-blue-600 font-semibold mb-1">Tanggal Pinjam</p>
-                <p className="text-sm font-bold text-slate-800">
-                  {new Date(peminjaman.tanggal_pinjam).toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs text-blue-600 font-semibold mb-1">Target Kembali</p>
-                <p className="text-sm font-bold text-slate-800">
-                  {new Date(peminjaman.tanggal_kembali_rencana).toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
-
-              {peminjaman.tanggal_kembali_aktual && (
-                <div>
-                  <p className="text-xs text-blue-600 font-semibold mb-1">Tanggal Kembali Aktual</p>
-                  <p className="text-sm font-bold text-slate-800">
-                    {new Date(peminjaman.tanggal_kembali_aktual).toLocaleDateString('id-ID', {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {peminjaman.status === 'disetujui' && !peminjaman.tanggal_kembali_aktual && (
-              <div className="bg-white p-3 rounded-lg border border-blue-200">
-                <p className="text-xs text-blue-600 font-semibold mb-1">Durasi Peminjaman</p>
-                <p className="text-sm font-bold text-slate-800">{calculateDurasi()}</p>
-              </div>
-            )}
-          </div>
 
           {peminjaman.total_denda > 0 && (
             <div className="bg-linear-to-br from-orange-50 to-amber-50 p-5 rounded-2xl border-2 border-orange-200">
@@ -407,9 +356,6 @@ export default function PeminjamHistoryPage() {
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Jumlah</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Tanggal</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Biaya Sewa</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase">Denda</th>
-                    <th className="px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
