@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Wrench, User, Calendar, DollarSign, AlertCircle, Search, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Wrench, User, Calendar, DollarSign, AlertCircle, Search, CheckCircle, Package } from 'lucide-react';
 import RoleProtection from '@/components/RoleProtection';
 
 export default function PengembalianPage() {
@@ -20,15 +20,13 @@ export default function PengembalianPage() {
   const [tanggalKembali, setTanggalKembali] = useState('');
   const [activeTab, setActiveTab] = useState('proses');
 
-  // Initialize tanggal kembali saat component mount
   useEffect(() => {
     setTanggalKembali(formatDateInput(new Date()));
   }, []);
 
-  // Fetch data saat component mount
   useEffect(() => {
     fetchData();
-  }, []); // PENTING: Empty dependency array agar hanya run sekali
+  }, []);
 
   function formatDateInput(date) {
     const year = date.getFullYear();
@@ -57,7 +55,6 @@ export default function PengembalianPage() {
     try {
       setLoading(true);
       
-      // Fetch peminjaman yang disetujui (belum dikembalikan)
       const peminjamanRes = await fetch('/api/admin/peminjaman', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -65,7 +62,6 @@ export default function PengembalianPage() {
       const aktif = (peminjamanData.data || []).filter(p => p.status === 'disetujui');
       setPeminjamanAktif(aktif);
 
-      // Fetch riwayat pengembalian
       const pengembalianRes = await fetch('/api/admin/pengembalian', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -91,13 +87,13 @@ export default function PengembalianPage() {
     return 0;
   }
 
-  function calculateBiayaSewa(tanggalPinjam, tanggalKembali, hargaSewa) {
+  function calculateBiayaSewa(tanggalPinjam, tanggalKembali, hargaSewa, jumlah) {
     const pinjam = new Date(tanggalPinjam);
     const kembali = new Date(tanggalKembali);
     const diffTime = kembali - pinjam;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    return Math.max(1, diffDays) * (hargaSewa || 0);
+    return Math.max(1, diffDays) * (hargaSewa || 0) * (jumlah || 1);
   }
 
   function handleSelectPeminjaman(p) {
@@ -113,9 +109,17 @@ export default function PengembalianPage() {
     }
 
     const denda = calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali);
+    const biayaSewa = calculateBiayaSewa(
+      selectedPeminjaman.tanggal_pinjam,
+      tanggalKembali,
+      selectedPeminjaman.harga_sewa,
+      selectedPeminjaman.jumlah
+    );
+    const total = biayaSewa + denda;
+
     const confirmText = denda > 0
-      ? `Proses pengembalian dengan denda Rp ${denda.toLocaleString('id-ID')}?`
-      : 'Proses pengembalian alat?';
+      ? `Proses pengembalian dengan:\n• Biaya Sewa: Rp ${biayaSewa.toLocaleString('id-ID')}\n• Denda: Rp ${denda.toLocaleString('id-ID')}\n• Total: Rp ${total.toLocaleString('id-ID')}`
+      : `Proses pengembalian dengan biaya sewa Rp ${biayaSewa.toLocaleString('id-ID')}?`;
 
     if (!confirm(confirmText)) return;
 
@@ -184,7 +188,6 @@ export default function PengembalianPage() {
   return (
     <RoleProtection allowedRoles={['admin']}>
       <div className="min-h-screen bg-linear-to-br from-green-50 to-blue-50">
-        {/* Header */}
         <nav className="bg-white shadow-md sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center">
@@ -201,7 +204,6 @@ export default function PengembalianPage() {
         </nav>
 
         <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-          {/* Tabs */}
           <div className="bg-white rounded-2xl shadow-md p-2 flex gap-2">
             <button
               onClick={() => setActiveTab('proses')}
@@ -225,7 +227,6 @@ export default function PengembalianPage() {
             </button>
           </div>
 
-          {/* Search */}
           <div className="bg-white rounded-2xl shadow-md p-6">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -248,7 +249,6 @@ export default function PengembalianPage() {
 
           {activeTab === 'proses' ? (
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* List Peminjaman Aktif */}
               <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
                 <div className="p-6 border-b border-gray-100 bg-linear-to-r from-green-50 to-blue-50">
                   <h2 className="text-xl font-bold text-gray-800">
@@ -262,7 +262,7 @@ export default function PengembalianPage() {
                     <p className="text-gray-500">Tidak ada alat yang sedang dipinjam</p>
                   </div>
                 ) : (
-                  <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
+                  <div className="max-h-150 overflow-y-auto divide-y divide-gray-100">
                     {filteredPeminjamanAktif.map((p) => {
                       const isSelected = selectedPeminjaman?.id_peminjaman === p.id_peminjaman;
                       const hariTerlambat = Math.max(0, Math.floor(
@@ -287,7 +287,9 @@ export default function PengembalianPage() {
                                 </div>
                                 <div>
                                   <p className="font-semibold text-gray-800">{p.nama_alat}</p>
-                                  <p className="text-xs text-gray-500">ID: #{p.id_alat}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {p.jumlah || 1} unit • Rp {(p.harga_sewa || 0).toLocaleString('id-ID')}/hari
+                                  </p>
                                 </div>
                               </div>
                               {hariTerlambat > 0 && (
@@ -321,7 +323,6 @@ export default function PengembalianPage() {
                 )}
               </div>
 
-              {/* Form Pengembalian */}
               <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
                 <div className="p-6 border-b border-gray-100 bg-linear-to-r from-green-50 to-blue-50">
                   <h2 className="text-xl font-bold text-gray-800">Form Pengembalian</h2>
@@ -337,13 +338,16 @@ export default function PengembalianPage() {
                     </div>
                   ) : (
                     <>
-                      {/* Info Peminjaman */}
                       <div className="p-4 bg-gray-50 rounded-xl space-y-3">
                         <h3 className="font-bold text-gray-800">Detail Peminjaman</h3>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-600">Alat:</span>
                             <span className="font-semibold">{selectedPeminjaman.nama_alat}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Jumlah:</span>
+                            <span className="font-semibold">{selectedPeminjaman.jumlah || 1} unit</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Peminjam:</span>
@@ -360,7 +364,7 @@ export default function PengembalianPage() {
                         </div>
                       </div>
 
-                      {/* Form Input */}
+                      {/* FIXED: min instead of max */}
                       <div>
                         <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                           <Calendar className="w-4 h-4 text-green-600" />
@@ -370,14 +374,33 @@ export default function PengembalianPage() {
                           type="date"
                           value={tanggalKembali}
                           onChange={(e) => setTanggalKembali(e.target.value)}
-                          max={formatDateInput(new Date())}
+                          min={selectedPeminjaman.tanggal_pinjam}
                           className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all"
                         />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Minimal: {formatDate(selectedPeminjaman.tanggal_pinjam)}
+                        </p>
                       </div>
 
-                      {/* Denda & Biaya Calculation */}
                       {tanggalKembali && (
                         <div className="space-y-3">
+                          <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-semibold text-gray-700">Biaya Sewa:</span>
+                              <span className="text-2xl font-bold text-blue-600">
+                                Rp {calculateBiayaSewa(
+                                  selectedPeminjaman.tanggal_pinjam,
+                                  tanggalKembali,
+                                  selectedPeminjaman.harga_sewa,
+                                  selectedPeminjaman.jumlah
+                                ).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600">
+                              {Math.ceil((new Date(tanggalKembali) - new Date(selectedPeminjaman.tanggal_pinjam)) / (1000 * 60 * 60 * 24))} hari × Rp {(selectedPeminjaman.harga_sewa || 0).toLocaleString('id-ID')} × {selectedPeminjaman.jumlah || 1} unit
+                            </p>
+                          </div>
+
                           <div className={`p-4 rounded-xl ${
                             calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
                               ? 'bg-orange-50 border-2 border-orange-200'
@@ -386,11 +409,6 @@ export default function PengembalianPage() {
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-semibold text-gray-700">Denda Keterlambatan:</span>
                               <div className="flex items-center gap-2">
-                                <DollarSign size={20} className={
-                                  calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
-                                    ? 'text-orange-600'
-                                    : 'text-green-600'
-                                } />
                                 <span className={`text-2xl font-bold ${
                                   calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
                                     ? 'text-orange-600'
@@ -407,28 +425,12 @@ export default function PengembalianPage() {
                             </p>
                           </div>
 
-                          <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-semibold text-gray-700">Biaya Sewa:</span>
-                              <span className="text-2xl font-bold text-blue-600">
-                                Rp {calculateBiayaSewa(
-                                  selectedPeminjaman.tanggal_pinjam,
-                                  tanggalKembali,
-                                  selectedPeminjaman.harga_sewa
-                                ).toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-600">
-                              {Math.ceil((new Date(tanggalKembali) - new Date(selectedPeminjaman.tanggal_pinjam)) / (1000 * 60 * 60 * 24))} hari × Rp {(selectedPeminjaman.harga_sewa || 0).toLocaleString('id-ID')}
-                            </p>
-                          </div>
-
                           <div className="p-4 rounded-xl bg-purple-50 border-2 border-purple-200">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-semibold text-gray-700">Total Pembayaran:</span>
                               <span className="text-2xl font-bold text-purple-600">
                                 Rp {(
-                                  calculateBiayaSewa(selectedPeminjaman.tanggal_pinjam, tanggalKembali, selectedPeminjaman.harga_sewa) +
+                                  calculateBiayaSewa(selectedPeminjaman.tanggal_pinjam, tanggalKembali, selectedPeminjaman.harga_sewa, selectedPeminjaman.jumlah) +
                                   calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali)
                                 ).toLocaleString('id-ID')}
                               </span>
@@ -437,7 +439,6 @@ export default function PengembalianPage() {
                         </div>
                       )}
 
-                      {/* Submit Button */}
                       <button
                         onClick={handleProsesPengembalian}
                         disabled={processing || !tanggalKembali}
@@ -461,7 +462,6 @@ export default function PengembalianPage() {
               </div>
             </div>
           ) : (
-            /* Riwayat Pengembalian */
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -469,6 +469,7 @@ export default function PengembalianPage() {
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">Peminjam</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">Alat</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">Jumlah</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">Tgl Pinjam</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">Tgl Kembali Rencana</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase">Tgl Kembali Aktual</th>
@@ -478,7 +479,7 @@ export default function PengembalianPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredRiwayat.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="px-6 py-12 text-center">
+                        <td colSpan="7" className="px-6 py-12 text-center">
                           <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                           <p className="text-gray-500">Belum ada riwayat pengembalian</p>
                         </td>
@@ -496,6 +497,12 @@ export default function PengembalianPage() {
                             <div className="flex items-center gap-2">
                               <Wrench size={16} className="text-orange-500" />
                               <span className="font-medium text-gray-800">{item.nama_alat}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <Package size={16} className="text-purple-500" />
+                              <span className="font-semibold text-gray-800">{item.jumlah || 1} unit</span>
                             </div>
                           </td>
                           <td className="px-6 py-4 text-gray-700">{formatDate(item.tanggal_pinjam)}</td>

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api-client';
 import { getUser } from '@/lib/client-auth';
 import { 
-  ArrowLeft, Wrench, User, Calendar, DollarSign,
+  ArrowLeft, Wrench, User, Calendar, DollarSign, Package,
   AlertCircle, Search, CheckCircle, Clock
 } from 'lucide-react';
 import RoleProtection from '@/components/RoleProtection';
@@ -60,9 +60,18 @@ export default function PetugasPengembalianPage() {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays > 0) {
-      return diffDays * 5000; // Rp 5.000 per hari
+      return diffDays * 5000;
     }
     return 0;
+  }
+
+  function calculateBiayaSewa(tanggalPinjam, tanggalKembali, hargaSewa, jumlah) {
+    const pinjam = new Date(tanggalPinjam);
+    const kembali = new Date(tanggalKembali);
+    const diffTime = kembali - pinjam;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return Math.max(1, diffDays) * (hargaSewa || 0) * (jumlah || 1);
   }
 
   function handleSelectPeminjaman(p) {
@@ -78,9 +87,17 @@ export default function PetugasPengembalianPage() {
     }
 
     const denda = calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali);
+    const biayaSewa = calculateBiayaSewa(
+      selectedPeminjaman.tanggal_pinjam, 
+      tanggalKembali, 
+      selectedPeminjaman.harga_sewa,
+      selectedPeminjaman.jumlah
+    );
+    const total = biayaSewa + denda;
+
     const confirmText = denda > 0
-      ? `Proses pengembalian dengan denda Rp ${denda.toLocaleString('id-ID')}?`
-      : 'Proses pengembalian alat?';
+      ? `Proses pengembalian dengan:\n• Biaya Sewa: Rp ${biayaSewa.toLocaleString('id-ID')}\n• Denda: Rp ${denda.toLocaleString('id-ID')}\n• Total: Rp ${total.toLocaleString('id-ID')}`
+      : `Proses pengembalian dengan biaya sewa Rp ${biayaSewa.toLocaleString('id-ID')}?`;
 
     if (!confirm(confirmText)) return;
 
@@ -214,7 +231,9 @@ export default function PetugasPengembalianPage() {
                             </div>
                             <div>
                               <p className="font-semibold text-gray-800">{p.nama_alat}</p>
-                              <p className="text-xs text-gray-500">ID: #{p.id_alat}</p>
+                              <p className="text-xs text-gray-500">
+                                {p.jumlah || 1} unit • Rp {(p.harga_sewa || 0).toLocaleString('id-ID')}/hari
+                              </p>
                             </div>
                           </div>
                           {hariTerlambat > 0 && (
@@ -273,6 +292,10 @@ export default function PetugasPengembalianPage() {
                         <span className="font-semibold">{selectedPeminjaman.nama_alat}</span>
                       </div>
                       <div className="flex justify-between">
+                        <span className="text-gray-600">Jumlah:</span>
+                        <span className="font-semibold">{selectedPeminjaman.jumlah || 1} unit</span>
+                      </div>
+                      <div className="flex justify-between">
                         <span className="text-gray-600">Peminjam:</span>
                         <span className="font-semibold">{selectedPeminjaman.nama_user}</span>
                       </div>
@@ -291,7 +314,7 @@ export default function PetugasPengembalianPage() {
                     </div>
                   </div>
 
-                  {/* Form Input */}
+                  {/* Form Input - FIXED: min instead of max */}
                   <div>
                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                       <Calendar className="w-4 h-4 text-green-600" />
@@ -301,40 +324,72 @@ export default function PetugasPengembalianPage() {
                       type="date"
                       value={tanggalKembali}
                       onChange={(e) => setTanggalKembali(e.target.value)}
-                      max={formatDateInput(new Date())}
+                      min={selectedPeminjaman.tanggal_pinjam}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-4 focus:ring-green-100 transition-all"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Minimal: {new Date(selectedPeminjaman.tanggal_pinjam).toLocaleDateString('id-ID')}
+                    </p>
                   </div>
 
-                  {/* Denda Calculation */}
+                  {/* Biaya & Denda Calculation */}
                   {tanggalKembali && (
-                    <div className={`p-4 rounded-xl ${
-                      calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
-                        ? 'bg-orange-50 border-2 border-orange-200'
-                        : 'bg-green-50 border-2 border-green-200'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold text-gray-700">Total Denda:</span>
-                        <div className="flex items-center gap-2">
-                          <DollarSign size={20} className={
-                            calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
-                              ? 'text-orange-600'
-                              : 'text-green-600'
-                          } />
-                          <span className={`text-2xl font-bold ${
-                            calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
-                              ? 'text-orange-600'
-                              : 'text-green-600'
-                          }`}>
-                            Rp {calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali).toLocaleString('id-ID')}
+                    <div className="space-y-3">
+                      {/* Biaya Sewa */}
+                      <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-gray-700">Biaya Sewa:</span>
+                          <span className="text-2xl font-bold text-blue-600">
+                            Rp {calculateBiayaSewa(
+                              selectedPeminjaman.tanggal_pinjam,
+                              tanggalKembali,
+                              selectedPeminjaman.harga_sewa,
+                              selectedPeminjaman.jumlah
+                            ).toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {Math.ceil((new Date(tanggalKembali) - new Date(selectedPeminjaman.tanggal_pinjam)) / (1000 * 60 * 60 * 24))} hari × Rp {(selectedPeminjaman.harga_sewa || 0).toLocaleString('id-ID')} × {selectedPeminjaman.jumlah || 1} unit
+                        </p>
+                      </div>
+
+                      {/* Denda */}
+                      <div className={`p-4 rounded-xl ${
+                        calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
+                          ? 'bg-orange-50 border-2 border-orange-200'
+                          : 'bg-green-50 border-2 border-green-200'
+                      }`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-gray-700">Denda Keterlambatan:</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-2xl font-bold ${
+                              calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
+                                ? 'text-orange-600'
+                                : 'text-green-600'
+                            }`}>
+                              Rp {calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali).toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
+                            ? `Terlambat ${Math.floor((new Date(tanggalKembali) - new Date(selectedPeminjaman.tanggal_kembali_rencana)) / (1000 * 60 * 60 * 24))} hari × Rp 5.000`
+                            : 'Tidak ada denda (tepat waktu)'}
+                        </p>
+                      </div>
+
+                      {/* Total */}
+                      <div className="p-4 rounded-xl bg-purple-50 border-2 border-purple-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-700">Total Pembayaran:</span>
+                          <span className="text-2xl font-bold text-purple-600">
+                            Rp {(
+                              calculateBiayaSewa(selectedPeminjaman.tanggal_pinjam, tanggalKembali, selectedPeminjaman.harga_sewa, selectedPeminjaman.jumlah) +
+                              calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali)
+                            ).toLocaleString('id-ID')}
                           </span>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-600">
-                        {calculateDenda(selectedPeminjaman.tanggal_kembali_rencana, tanggalKembali) > 0
-                          ? `Terlambat ${Math.floor((new Date(tanggalKembali) - new Date(selectedPeminjaman.tanggal_kembali_rencana)) / (1000 * 60 * 60 * 24))} hari × Rp 5.000`
-                          : 'Tidak ada denda (tepat waktu)'}
-                      </p>
                     </div>
                   )}
 
